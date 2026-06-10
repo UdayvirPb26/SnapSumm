@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin Dashboard - Snap-Summ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#08090b;
+  --surface:#0f1116;
+  --surface2:#161820;
+  --border:#1e2130;
+  --border2:#2a2e45;
+  --accent:#e8ff47;
+  --text:#f0f2ff;
+  --text2:#8890b0;
+  --radius:14px;
+  --radius-sm:8px;
+  --ff-head:'Poppins',sans-serif;
+  --ff-body:'Poppins',sans-serif;
+  --transition:0.22s cubic-bezier(0.4,0,0.2,1);
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--ff-body);
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+body::after{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:0.45;
+}
+.ambient{position:fixed;top:-30%;left:50%;transform:translateX(-50%);width:900px;height:600px;background:radial-gradient(ellipse at center, rgba(232,255,71,0.04) 0%, transparent 70%);pointer-events:none;z-index:0;}
+.topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:60px;background:rgba(8,9,11,0.90);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
+.wordmark{display:flex;align-items:center;gap:10px;font-family:var(--ff-head);font-size:16px;font-weight:700;letter-spacing:-0.3px;color:var(--text);}
+.wordmark-badge{width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;}
+.wordmark-text{display:flex;align-items:baseline;gap:1px;}
+.wordmark-snap{font-weight:700;}
+.wordmark-sep{color:var(--accent);font-weight:800;font-size:17px;line-height:1;margin:0 0.5px;opacity:0.85;}
+.wordmark-summ{color:var(--text2);font-weight:500;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.user-info{display:flex;align-items:center;gap:10px;padding:0 12px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);font-family:var(--ff-head);font-size:13px;color:var(--text);}
+.user-info .username{font-weight:600;color:var(--accent);}
+.icon-btn, .logout-btn{display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);font-family:var(--ff-head);font-size:12px;font-weight:600;text-decoration:none;padding:0 12px;height:36px;cursor:pointer;transition:all var(--transition);} 
+.icon-btn:hover,.logout-btn:hover{border-color:var(--border2);color:var(--text);}
+.logout-btn{border-color:var(--red);color:var(--red);background:rgba(255,58,58,0.1);}
+.main{max-width:980px;margin:0 auto;padding:60px 24px 100px;position:relative;z-index:1;}
+.admin-hero{margin-bottom:30px;}
+.admin-hero .hero-label{display:inline-flex;align-items:center;gap:6px;font-family:var(--ff-mono);font-size:11px;font-weight:500;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;border:1px solid rgba(232,255,71,0.2);padding:6px 12px;border-radius:20px;background:rgba(232,255,71,0.08);}
+.admin-hero h1{font-family:var(--ff-head);font-size:clamp(34px,5vw,48px);font-weight:800;line-height:1.08;letter-spacing:-1px;margin-bottom:14px;}
+.admin-hero p{max-width:720px;font-size:15px;color:var(--text2);line-height:1.7;}
+.stats-row{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:18px;margin-bottom:32px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;}
+.stat-card strong{display:block;font-size:32px;color:var(--accent);margin-bottom:8px;}
+.stat-card span{font-size:13px;color:var(--text2);letter-spacing:0.4px;text-transform:uppercase;}
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;}
+.table-card h2{font-family:var(--ff-head);font-size:18px;margin-bottom:18px;}
+.admin-table{width:100%;border-collapse:collapse;font-size:14px;color:var(--text);}
+.admin-table th, .admin-table td{padding:14px 16px;border-bottom:1px solid var(--border);text-align:left;}
+.admin-table th{font-family:var(--ff-head);font-size:12px;text-transform:uppercase;color:var(--text2);letter-spacing:0.08em;}
+.admin-table tbody tr:hover{background:rgba(232,255,71,0.04);}
+.delete-form{margin:0;}
+.delete-button{font-family:var(--ff-head);font-size:12px;font-weight:700;color:#ff6a6a;background:rgba(255,58,58,0.09);border:1px solid rgba(255,58,58,0.2);border-radius:10px;padding:8px 12px;cursor:pointer;transition:all var(--transition);}
+.delete-button:hover{background:rgba(255,58,58,0.18);}
+.note{margin-top:18px;font-size:13px;color:var(--text2);}
+@media(max-width:840px){.stats-row{grid-template-columns:1fr;}.topbar{padding:0 16px;}.main{padding:48px 16px 80px;}}
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+<header class="topbar">
+  <div class="wordmark">
+    <div class="wordmark-badge">
+      <svg viewBox="0 0 24 24"><path d="M10 8l6 4-6 4V8z"/></svg>
+    </div>
+    <div class="wordmark-text">
+      <span class="wordmark-snap">Snap</span><span class="wordmark-sep">–</span><span class="wordmark-summ">Summ</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="user-info">
+      
+      <span class="username">{{ username }}</span>
+    </div>
+    <a href="{{ url_for('index') }}" class="icon-btn" title="Return to app">Home</a>
+    <a href="{{ url_for('logout') }}" class="logout-btn" title="Logout">Logout</a>
+  </div>
+</header>
+<main class="main">
+  <section class="admin-hero">
+    <div class="hero-label">Admin dashboard</div>
+    <h1>Manage Snap-Summ users</h1>
+    <p>You are signed in as the admin user. Use this page to review registered accounts and remove accounts when needed.</p>
+  </section>
+  <div class="stats-row">
+    <div class="stat-card">
+      <strong>{{ user_count }}</strong>
+      <span>Total users</span>
+    </div>
+    <div class="stat-card">
+      <strong>Protected</strong>
+      <span>Admin account cannot be deleted</span>
+    </div>
+    <div class="stat-card">
+      <strong>Secure</strong>
+      <span>Only admin users can access this page</span>
+    </div>
+  </div>
+  <div class="table-card">
+    <h2>Registered users</h2>
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Joined</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td>{{ user.id }}</td>
+          <td>{{ user.username }}</td>
+          <td>{{ user.email }}</td>
+          <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '—' }}</td>
+          <td>
+            {% if user.username.lower() != 'admin' %}
+            <form class="delete-form" method="post" action="{{ url_for('admin_delete_user', user_id=user.id) }}">
+              <button type="submit" class="delete-button">Delete</button>
+            </form>
+            {% else %}
+            <span style="font-size:12px;color:var(--text2);">Owner</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="note">The first user to register with username <strong>admin</strong> becomes the single admin. No second admin account can be created.</p>
+  </div>
+</main>
+</body>
+</html>
