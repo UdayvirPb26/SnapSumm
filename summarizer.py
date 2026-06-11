@@ -1,7 +1,7 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
 from transformers import pipeline
-import torch
+import torch    
 import os
 import re
 import time
