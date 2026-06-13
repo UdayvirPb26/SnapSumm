@@ -126,10 +126,12 @@ VIDBRIEF_BATCH_SIZE=3 VIDBRIEF_NUM_BEAMS=1 python app.py
 VIDBRIEF_BATCH_SIZE=1 VIDBRIEF_NUM_BEAMS=4 python app.py
 ```
 
-For a much faster but smaller model, run:
+Vidbrief loads BART directly from `models/bart-large-cnn` with
+`AutoTokenizer` and `AutoModelForSeq2SeqLM`; it does not use the Hugging Face
+pipeline API. To use a different local model directory, run:
 
 ```bash
-VIDBRIEF_MODEL=sshleifer/distilbart-cnn-12-6 python app.py
+VIDBRIEF_MODEL=/absolute/path/to/local/model python app.py
 ```
 
 ---

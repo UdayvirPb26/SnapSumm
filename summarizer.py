@@ -1,16 +1,17 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
-from transformers import pipeline
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import torch    
 import os
 import re
 import time
+from pathlib import Path
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Model: facebook/bart-large-cnn
 #
 # Token limits:
-#   - Max INPUT  : 1024 tokens ≈ 700–750 words per chunk (we use 600 — safe)
+#   - Max INPUT  : 1024 tokens ≈ 700–750 words per chunk (we use 550 — safe)
 #   - Max OUTPUT : 1024 tokens (model hard limit per single inference call)
 #
 # With larger output capacity, we can generate 300–400 word summaries efficiently
@@ -58,16 +59,25 @@ def select_device() -> torch.device:
 DEVICE = select_device()
 print(f"Using device: {DEVICE}")
 
-MODEL_NAME = os.getenv("VIDBRIEF_MODEL", "facebook/bart-large-cnn")
-print(f"Using model: {MODEL_NAME}")
+DEFAULT_MODEL_PATH = Path(__file__).resolve().parent / "models" / "bart-large-cnn"
+MODEL_PATH = Path(os.getenv("VIDBRIEF_MODEL", str(DEFAULT_MODEL_PATH))).expanduser()
+print(f"Using local model: {MODEL_PATH}")
 
-summarizer = pipeline(
-    "summarization",
-    model=MODEL_NAME,
-    device=DEVICE
-)
+if not MODEL_PATH.exists():
+    raise FileNotFoundError(
+        f"Local BART model not found at '{MODEL_PATH}'. "
+        "Set VIDBRIEF_MODEL to the directory containing config.json, "
+        "model.safetensors, and the tokenizer files."
+    )
 
-MODEL_DEVICE = next(summarizer.model.parameters()).device
+tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, local_files_only=True)
+model = AutoModelForSeq2SeqLM.from_pretrained(
+    MODEL_PATH,
+    local_files_only=True,
+).to(DEVICE)
+model.eval()
+
+MODEL_DEVICE = next(model.parameters()).device
 print(f"Model parameters are on: {MODEL_DEVICE}")
 
 TOKENIZER_MAX_LENGTH = 1024
@@ -165,31 +175,56 @@ def enforce_target_word_count(summary: str, source_texts: list[str]) -> str:
 
 
 def truncate_to_token_limit(text: str, token_limit: int) -> str:
-    encoded = summarizer.tokenizer.encode(text, add_special_tokens=False)
+    encoded = tokenizer.encode(text, add_special_tokens=False)
     if len(encoded) <= token_limit:
         return text
-    return summarizer.tokenizer.decode(
+    return tokenizer.decode(
         encoded[:token_limit],
         skip_special_tokens=True,
         clean_up_tokenization_spaces=True,
     )
 
 
+def generate_summaries(texts: list[str], **generate_kwargs) -> list[dict[str, str]]:
+    """Run BART directly through model.generate(), without a HF pipeline."""
+    summaries = []
+    generation_options = {**GENERATION_KWARGS, **generate_kwargs}
+
+    for start in range(0, len(texts), BATCH_SIZE):
+        batch = texts[start:start + BATCH_SIZE]
+        inputs = tokenizer(
+            batch,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            # Text is already capped at 992 non-special tokens above. Keep room
+            # for BART's special tokens within its 1024-position encoder limit.
+            max_length=TOKENIZER_MAX_LENGTH,
+        )
+        inputs = {name: tensor.to(MODEL_DEVICE) for name, tensor in inputs.items()}
+
+        with torch.inference_mode():
+            output_ids = model.generate(**inputs, **generation_options)
+
+        decoded = tokenizer.batch_decode(
+            output_ids,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=True,
+        )
+        summaries.extend({"summary_text": summary.strip()} for summary in decoded)
+
+    return summaries
+
+
 def safe_summarize(text: str, **generate_kwargs):
-    safe_text = truncate_to_token_limit(text, SAFE_TOKEN_LIMIT)
-    return summarizer(safe_text, **GENERATION_KWARGS, **generate_kwargs)
+    return safe_summarize_batch([text], **generate_kwargs)
 
 
 def safe_summarize_batch(texts: list[str], **generate_kwargs):
     if not texts:
         return []
     safe_texts = [truncate_to_token_limit(text, SAFE_TOKEN_LIMIT) for text in texts]
-    return summarizer(
-        safe_texts,
-        batch_size=BATCH_SIZE,
-        **GENERATION_KWARGS,
-        **generate_kwargs,
-    )
+    return generate_summaries(safe_texts, **generate_kwargs)
 
 
 def extract_video_id(url: str) -> str | None:
@@ -242,7 +277,7 @@ def fetch_transcript(video_id: str) -> str:
 
 
 def chunk_text(text: str) -> list:
-    """Split transcript into 600-word chunks for facebook/bart-large-cnn."""
+    """Split a transcript using the configured chunk word limit."""
     words = text.split()
     chunks, chunk = [], []
 
@@ -321,7 +356,7 @@ def summarize_text(text: str) -> str:
     Three-stage summarization pipeline targeting 300–400 word output:
 
     Stage 1 — Chunk pass:
-        Transcript → 600-word chunks → each summarized by distilbart
+        Transcript → fixed-size word chunks → each summarized by local BART
 
     Stage 2 — Consolidation pass:
         Chunk summaries joined → re-summarized into one paragraph
