@@ -3,11 +3,29 @@ venv/
 __pycache__/
 *.pyc
 *.pyo
+
 .env
+
 *.egg-info/
 dist/
 build/
+
 .DS_Store
+
 *.db
 *.sqlite3
 instance/
+
+# Local ML models - do not commit large model files
+models/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.h5
+*.msgpack
+*.ot
+
+# Hugging Face cache/files
+.cache/
+huggingface/
