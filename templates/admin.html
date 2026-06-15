@@ -14,7 +14,12 @@
   --surface2:#161820;
   --border:#1e2130;
   --border2:#2a2e45;
-  --accent:#e8ff47;
+  --accent:#faca5c;
+  --accent2:#f07645;
+  --accent3:#de3129;
+  --accent-grad:linear-gradient(45deg,#faca5c 0%,#f8aa56 24%,#f07645 50%,#e85338 74%,#de3129 100%);
+  --accent-dim:rgba(250,202,92,0.13);
+  --accent-glow:rgba(240,118,69,0.34);
   --text:#f0f2ff;
   --text2:#8890b0;
   --radius:14px;
@@ -36,10 +41,10 @@ body::after{
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
   pointer-events:none;z-index:0;opacity:0.45;
 }
-.ambient{position:fixed;top:-30%;left:50%;transform:translateX(-50%);width:900px;height:600px;background:radial-gradient(ellipse at center, rgba(232,255,71,0.04) 0%, transparent 70%);pointer-events:none;z-index:0;}
+.ambient{position:fixed;top:-30%;left:50%;transform:translateX(-50%);width:900px;height:600px;background:radial-gradient(ellipse at center, rgba(240,118,69,0.055) 0%, transparent 70%);pointer-events:none;z-index:0;}
 .topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:60px;background:rgba(8,9,11,0.90);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);}
 .wordmark{display:flex;align-items:center;gap:10px;font-family:var(--ff-head);font-size:16px;font-weight:700;letter-spacing:-0.3px;color:var(--text);}
-.wordmark-badge{width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;}
+.wordmark-badge{width:28px;height:28px;background:var(--accent-grad);border-radius:7px;display:flex;align-items:center;justify-content:center;}
 .wordmark-text{display:flex;align-items:baseline;gap:1px;}
 .wordmark-snap{font-weight:700;}
 .wordmark-sep{color:var(--accent);font-weight:800;font-size:17px;line-height:1;margin:0 0.5px;opacity:0.85;}
@@ -52,7 +57,7 @@ body::after{
 .logout-btn{border-color:var(--red);color:var(--red);background:rgba(255,58,58,0.1);}
 .main{max-width:980px;margin:0 auto;padding:60px 24px 100px;position:relative;z-index:1;}
 .admin-hero{margin-bottom:30px;}
-.admin-hero .hero-label{display:inline-flex;align-items:center;gap:6px;font-family:var(--ff-mono);font-size:11px;font-weight:500;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;border:1px solid rgba(232,255,71,0.2);padding:6px 12px;border-radius:20px;background:rgba(232,255,71,0.08);}
+.admin-hero .hero-label{display:inline-flex;align-items:center;gap:6px;font-family:var(--ff-mono);font-size:11px;font-weight:500;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;border:1px solid rgba(240,118,69,0.2);padding:6px 12px;border-radius:20px;background:var(--accent-dim);}
 .admin-hero h1{font-family:var(--ff-head);font-size:clamp(34px,5vw,48px);font-weight:800;line-height:1.08;letter-spacing:-1px;margin-bottom:14px;}
 .admin-hero p{max-width:720px;font-size:15px;color:var(--text2);line-height:1.7;}
 .stats-row{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:18px;margin-bottom:32px;}
@@ -64,7 +69,7 @@ body::after{
 .admin-table{width:100%;border-collapse:collapse;font-size:14px;color:var(--text);}
 .admin-table th, .admin-table td{padding:14px 16px;border-bottom:1px solid var(--border);text-align:left;}
 .admin-table th{font-family:var(--ff-head);font-size:12px;text-transform:uppercase;color:var(--text2);letter-spacing:0.08em;}
-.admin-table tbody tr:hover{background:rgba(232,255,71,0.04);}
+.admin-table tbody tr:hover{background:rgba(250,202,92,0.04);}
 .delete-form{margin:0;}
 .delete-button{font-family:var(--ff-head);font-size:12px;font-weight:700;color:#ff6a6a;background:rgba(255,58,58,0.09);border:1px solid rgba(255,58,58,0.2);border-radius:10px;padding:8px 12px;cursor:pointer;transition:all var(--transition);}
 .delete-button:hover{background:rgba(255,58,58,0.18);}

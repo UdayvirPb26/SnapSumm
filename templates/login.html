@@ -15,9 +15,12 @@
   --surface2:#161820;
   --border:#1e2130;
   --border2:#2a2e45;
-  --accent:#e8ff47;
-  --accent-dim:rgba(232,255,71,0.12);
-  --accent-glow:rgba(232,255,71,0.28);
+  --accent:#faca5c;
+  --accent2:#f07645;
+  --accent3:#de3129;
+  --accent-grad:linear-gradient(45deg,#faca5c 0%,#f8aa56 24%,#f07645 50%,#e85338 74%,#de3129 100%);
+  --accent-dim:rgba(250,202,92,0.13);
+  --accent-glow:rgba(240,118,69,0.34);
   --text:#f0f2ff;
   --text2:#8890b0;
   --text3:#555d7a;
@@ -32,7 +35,7 @@ html,body{height:100%}
 body{
   font-family:var(--ff-head);
   background:
-    linear-gradient(90deg,rgba(232,255,71,0.035),transparent 42%),
+    linear-gradient(90deg,rgba(240,118,69,0.035),transparent 42%),
     var(--bg);
   color:var(--text);
   min-height:100vh;
@@ -76,7 +79,7 @@ body::after{
   flex-shrink:0;
 }
 .wordmark-badge{
-  width:48px;height:48px;background:var(--accent);border-radius:12px;
+  width:48px;height:48px;background:var(--accent-grad);border-radius:12px;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
   box-shadow:0 0 20px var(--accent-glow);
 }
@@ -96,7 +99,7 @@ body::after{
 .left-mid::before{
   content:'';position:absolute;
   width:850px;height:850px;
-  background:radial-gradient(circle, rgba(232,255,71,0.08) 0%, transparent 65%);
+  background:radial-gradient(circle, rgba(240,118,69,0.08) 0%, transparent 65%);
   pointer-events:none;border-radius:50%;
   animation:blobPulse 4s ease-in-out infinite;
 }
@@ -155,7 +158,7 @@ body::after{
 }
 .demo-btn{
   padding:10px 16px;
-  background:var(--accent);color:#0d1000;
+  background:var(--accent-grad);color:#0d1000;
   border-radius:8px;
   font-family:var(--ff-head);font-size:11px;font-weight:700;
   white-space:nowrap;flex-shrink:0;
@@ -168,7 +171,7 @@ body::after{
 }
 .demo-progress-fill{
   height:100%;width:72%;
-  background:linear-gradient(90deg,var(--accent),#4d7cff);
+  background:var(--accent-grad);
   border-radius:2px;
   animation:progressAnim 3s ease-in-out infinite alternate;
 }
@@ -182,7 +185,7 @@ body::after{
 }
 .demo-line::after{
   content:'';position:absolute;inset:0;
-  background:linear-gradient(90deg,transparent,rgba(232,255,71,0.15),transparent);
+  background:linear-gradient(90deg,transparent,rgba(250,202,92,0.15),transparent);
   animation:shimmer 2.2s ease-in-out infinite;
 }
 .demo-line:nth-child(1){width:100%;animation-delay:0s}
@@ -206,7 +209,7 @@ body::after{
 }
 .demo-kp-num{
   width:18px;height:18px;border-radius:4px;
-  background:var(--accent-dim);border:1px solid rgba(232,255,71,0.2);
+  background:var(--accent-dim);border:1px solid rgba(240,118,69,0.2);
   display:flex;align-items:center;justify-content:center;
   font-family:var(--ff-mono);font-size:8px;color:var(--accent);flex-shrink:0;
 }
@@ -216,7 +219,7 @@ body::after{
 }
 .demo-kp-line::after{
   content:'';position:absolute;inset:0;
-  background:linear-gradient(90deg,transparent,rgba(232,255,71,0.1),transparent);
+  background:linear-gradient(90deg,transparent,rgba(250,202,92,0.1),transparent);
   animation:shimmer 2.8s ease-in-out infinite;
 }
 .demo-kp-item:nth-child(1) .demo-kp-line{animation-delay:0.1s;width:80%}
@@ -228,23 +231,23 @@ body::after{
   position:absolute;top:14px;right:16px;
   display:inline-flex;align-items:center;gap:7px;
   background:rgba(15,17,22,.88);color:var(--accent);
-  border:1px solid rgba(232,255,71,.28);
+  border:1px solid rgba(240,118,69,.28);
   font-family:var(--ff-mono);font-size:9px;font-weight:700;
   padding:6px 10px;border-radius:999px;
   letter-spacing:.7px;text-transform:uppercase;
-  box-shadow:0 8px 24px rgba(0,0,0,.28), 0 0 18px rgba(232,255,71,.08);
+  box-shadow:0 8px 24px rgba(0,0,0,.28), 0 0 18px rgba(240,118,69,.08);
   backdrop-filter:blur(10px);
   animation:badgeGlow 4.8s ease-in-out infinite;
 }
 .demo-badge::before{
   content:'';
   width:6px;height:6px;border-radius:50%;
-  background:var(--accent);
+  background:var(--accent-grad);
   box-shadow:0 0 10px var(--accent-glow);
 }
 @keyframes badgeGlow{
-  0%,100%{box-shadow:0 8px 24px rgba(0,0,0,.28), 0 0 14px rgba(232,255,71,.08)}
-  50%{box-shadow:0 10px 28px rgba(0,0,0,.34), 0 0 22px rgba(232,255,71,.16)}
+  0%,100%{box-shadow:0 8px 24px rgba(0,0,0,.28), 0 0 14px rgba(240,118,69,.08)}
+  50%{box-shadow:0 10px 28px rgba(0,0,0,.34), 0 0 22px rgba(240,118,69,.16)}
 }
 
 /* ─── TOP — headline + stats ───────────────────────────────────── */
@@ -259,7 +262,7 @@ body::after{
   display:inline-flex;align-items:center;gap:8px;
   font-family:var(--ff-mono);font-size:11px;font-weight:500;
   color:var(--accent);letter-spacing:2px;text-transform:uppercase;
-  border:1px solid rgba(232,255,71,0.25);
+  border:1px solid rgba(240,118,69,0.25);
   padding:5px 12px;border-radius:20px;
   background:var(--accent-dim);margin-bottom:16px;
 }
@@ -304,7 +307,7 @@ body::after{
 .right-panel::before{
   content:'';position:absolute;top:-20%;right:-20%;
   width:480px;height:480px;
-  background:radial-gradient(circle, rgba(232,255,71,0.04) 0%, transparent 60%);
+  background:radial-gradient(circle, rgba(240,118,69,0.04) 0%, transparent 60%);
   pointer-events:none;
 }
 
@@ -351,7 +354,7 @@ form{width:100%;max-width:388px;position:relative;z-index:1}
 .submit-btn{
   width:100%;min-height:54px;padding:16px;margin-top:8px;
   font-family:var(--ff-head);font-size:15px;font-weight:700;
-  letter-spacing:0.2px;background:var(--accent);color:#0d1000;
+  letter-spacing:0.2px;background:var(--accent-grad);color:#0d1000;
   border:none;border-radius:10px;cursor:pointer;
   transition:all var(--transition);position:relative;overflow:hidden;
 }
@@ -430,7 +433,7 @@ form{width:100%;max-width:388px;position:relative;z-index:1}
 
 .thumb-img{
   height:100px;
-  background:linear-gradient(135deg,var(--accent),#4d7cff);
+  background:var(--accent-grad);
   position:relative;
   overflow:hidden;
 }
@@ -477,7 +480,7 @@ form{width:100%;max-width:388px;position:relative;z-index:1}
 .caption-loader span{
   flex:1;
   height:4px;
-  background:var(--accent);
+  background:var(--accent-grad);
   border-radius:50px;
   transform-origin:left center;
   animation:captionAnim 4.8s ease-in-out infinite;
