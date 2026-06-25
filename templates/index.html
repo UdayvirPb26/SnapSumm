@@ -659,6 +659,14 @@ body.light .wc-fill{background:var(--blue)}
 .copy-btn:hover,.save-btn:hover{border-color:var(--border2);color:var(--text)}
 .copy-btn svg,.save-btn svg{width:14px;height:14px;fill:currentColor}
 
+.translate-select{
+  padding:9px 14px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--surface2);
+  font-family:var(--ff-head);font-size:13px;font-weight:600;
+  color:var(--text2);cursor:pointer;transition:all var(--transition);
+}
+.translate-select:hover{border-color:var(--border2);color:var(--text)}
+
 .save-btn{
   border-color:rgba(240,118,69,0.34);
   background:var(--accent-dim);color:var(--accent);
@@ -857,6 +865,16 @@ body.light .error-box{color:#9b0000;background:rgba(255,58,58,0.06)}
             <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
             Copy
           </button>
+          <select id="translateLang" class="translate-select" aria-label="Select translation language">
+            <option value="hi">Hindi</option>
+            <option value="pa">Punjabi</option>
+            <option value="bn">Bengali</option>
+            <option value="ta">Tamil</option>
+            <option value="te">Telugu</option>
+          </select>
+          <button class="copy-btn" id="translateBtn" onclick="translateSummary()">
+            Translate
+          </button>
           {% if not is_guest %}
           <button class="save-btn" id="saveBtn" onclick="saveSummary()">
             <svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
@@ -897,7 +915,9 @@ body.light .error-box{color:#9b0000;background:rgba(255,58,58,0.06)}
 // ── STATE ────────────────────────────────────────────────────────
 let opts = { thumb: true, type: true, kp: true };
 let currentSummary = '';
+let originalSummary = '';
 let currentData = null;
+let isTranslated = false;
 let isDark = true;
 let stageTimer, stageIdx = 0;
 const IS_GUEST = "{{ 'true' if is_guest else 'false' }}" === "true";
@@ -990,7 +1010,9 @@ async function loadSummaryDetail(summaryId, event) {
 
 function displayLoadedSummary(data) {
   currentSummary = data.summary;
+  originalSummary = data.summary;
   currentData = data;
+  isTranslated = false;
 
   document.getElementById('metaBar').innerHTML = `
     <span class="meta-chip accent">ID: ${data.video_id}</span>
@@ -1021,6 +1043,14 @@ function displayLoadedSummary(data) {
   const summaryEl = document.getElementById('summaryText');
   summaryEl.textContent = data.summary;
   updateWordCount(data.summary);
+
+  const translateBtn = document.getElementById('translateBtn');
+  const langSelect = document.getElementById('translateLang');
+  if (translateBtn) {
+    translateBtn.textContent = 'Translate';
+    translateBtn.disabled = false;
+  }
+  if (langSelect) langSelect.disabled = false;
   
   document.getElementById('saveBtn').disabled = true;
   document.getElementById('saveBtn').textContent = '✓ Already Saved';
@@ -1238,6 +1268,60 @@ function copySummary() {
   });
 }
 
+// ── TRANSLATION ──────────────────────────────────────────────────
+async function translateSummary() {
+  const summaryEl = document.getElementById('summaryText');
+  const translateBtn = document.getElementById('translateBtn');
+  const langSelect = document.getElementById('translateLang');
+
+  if (!originalSummary) {
+    showError('No summary available to translate.');
+    return;
+  }
+
+  if (isTranslated) {
+    summaryEl.textContent = originalSummary;
+    currentSummary = originalSummary;
+    updateWordCount(originalSummary);
+    translateBtn.textContent = 'Translate';
+    langSelect.disabled = false;
+    isTranslated = false;
+    return;
+  }
+
+  translateBtn.disabled = true;
+  langSelect.disabled = true;
+  translateBtn.textContent = 'Translating...';
+
+  try {
+    const res = await fetch('/translate-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: originalSummary,
+        target_language: langSelect.value
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+      showError(data.error);
+      return;
+    }
+
+    summaryEl.textContent = data.translated_text;
+    currentSummary = data.translated_text;
+    updateWordCount(data.translated_text);
+    translateBtn.textContent = 'Show English';
+    isTranslated = true;
+  } catch (err) {
+    showError(`Translation failed: ${err.message}`);
+  } finally {
+    translateBtn.disabled = false;
+  }
+}
+
 // ── ERROR ─────────────────────────────────────────────────────────
 function showError(message) {
   const errorBox = document.getElementById('errorBox');
@@ -1249,6 +1333,8 @@ function showError(message) {
 function resetAll() {
   currentData = null;
   currentSummary = '';
+  originalSummary = '';
+  isTranslated = false;
   document.getElementById('resultWrap').style.display = 'none';
   document.getElementById('errorBox').style.display = 'none';
   document.getElementById('successBox').style.display = 'none';
@@ -1261,6 +1347,14 @@ function resetAll() {
     saveBtn.disabled = false;
     saveBtn.innerHTML = '<svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg> Save';
   }
+
+  const translateBtn = document.getElementById('translateBtn');
+  const langSelect = document.getElementById('translateLang');
+  if (translateBtn) {
+    translateBtn.textContent = 'Translate';
+    translateBtn.disabled = false;
+  }
+  if (langSelect) langSelect.disabled = false;
   
   window.scrollTo({ top: 0, behavior: 'smooth' });
   setTimeout(() => document.getElementById('urlInput').focus(), 400);
@@ -1308,7 +1402,17 @@ async function summarize() {
     }
 
     currentSummary = data.summary;
+    originalSummary = data.summary;
     currentData = data;
+    isTranslated = false;
+
+    const translateBtn = document.getElementById('translateBtn');
+    const langSelect = document.getElementById('translateLang');
+    if (translateBtn) {
+      translateBtn.textContent = 'Translate';
+      translateBtn.disabled = false;
+    }
+    if (langSelect) langSelect.disabled = false;
 
     document.getElementById('metaBar').innerHTML = `
       <span class="meta-chip accent">ID: ${data.video_id}</span>

@@ -6,6 +6,7 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from sqlalchemy import text
+from deep_translator import GoogleTranslator
 from models import db, User, Summary
 from summarizer import get_summary
 
@@ -196,6 +197,43 @@ def summarize():
         return jsonify(result), 500
 
     return jsonify(result)
+
+
+@app.route("/translate-summary", methods=["POST"])
+def translate_summary():
+    if not current_user.is_authenticated and not is_guest_mode():
+        return jsonify({"error": "Please sign in or continue as guest."}), 401
+
+    data = request.get_json()
+    text = data.get("text", "").strip()
+    target_language = data.get("target_language", "hi").strip()
+
+    allowed_languages = {
+        "hi": "Hindi",
+        "pa": "Punjabi",
+        "bn": "Bengali",
+        "ta": "Tamil",
+        "te": "Telugu",
+    }
+
+    if not text:
+        return jsonify({"error": "No summary text provided."}), 400
+
+    if target_language not in allowed_languages:
+        return jsonify({"error": "Unsupported language selected."}), 400
+
+    try:
+        translated_text = GoogleTranslator(
+            source="auto",
+            target=target_language
+        ).translate(text)
+
+        return jsonify({
+            "translated_text": translated_text,
+            "language": allowed_languages[target_language],
+        })
+    except Exception as e:
+        return jsonify({"error": f"Translation failed: {str(e)}"}), 500
 
 
 # ──── Summary Management Routes ────
