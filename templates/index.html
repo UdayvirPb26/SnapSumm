@@ -1124,16 +1124,17 @@ async function saveSummary() {
   
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
+  const summaryToSave = originalSummary || currentSummary;
   
   try {
     const res = await fetch('/save-summary', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: currentSummary.split(' ').slice(0,4).join(' ')+'…',
+        title: summaryToSave.split(' ').slice(0,4).join(' ')+'…',
         url: document.getElementById('urlInput').value || currentData.url,
         video_id: currentData.video_id,
-        summary: currentSummary,
+        summary: summaryToSave,
         key_points: currentData.key_points,
         transcript_length: currentData.transcript_length,
         thumbnail_url: currentData.thumbnail_url || ''
