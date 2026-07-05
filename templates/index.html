@@ -846,7 +846,7 @@ body.light .error-box{color:#9b0000;background:rgba(255,58,58,0.06)}
 
     <div class="result-tabs" id="resultTabs">
       <div class="rtab on" onclick="switchTab(0)">Summary</div>
-      <div class="rtab" onclick="switchTab(1)">Key Points</div>
+      <div class="rtab" id="keyPointsTab" onclick="switchTab(1)">Key Points</div>
       <div class="rtab" onclick="switchTab(2)">Raw Info</div>
     </div>
 
@@ -920,6 +920,7 @@ let currentData = null;
 let isTranslated = false;
 let isDark = true;
 let stageTimer, stageIdx = 0;
+let typewriterRunId = 0;
 const IS_GUEST = "{{ 'true' if is_guest else 'false' }}" === "true";
 
 const STAGES = [
@@ -1014,10 +1015,13 @@ function displayLoadedSummary(data) {
   currentData = data;
   isTranslated = false;
 
+  document.getElementById('urlInput').value = data.url || '';
+  onUrlInput(data.url || '');
+
   document.getElementById('metaBar').innerHTML = `
     <span class="meta-chip accent">ID: ${data.video_id}</span>
     <span class="meta-chip">${data.transcript_length.toLocaleString()} words transcribed</span>
-    <span class="meta-chip">${data.key_points.length} key points</span>
+    <span class="meta-chip key-points-meta">${data.key_points.length} key points</span>
   `;
 
   document.getElementById('rawInfo').textContent =
@@ -1036,6 +1040,8 @@ function displayLoadedSummary(data) {
         <div class="kp-text">${p}</div>
       </li>`)
     .join('');
+
+  applyKeyPointsOption();
 
   const resultWrap = document.getElementById('resultWrap');
   resultWrap.style.display = 'block';
@@ -1179,6 +1185,35 @@ function toggleTheme() {
 function toggleChip(el, key) {
   opts[key] = !opts[key];
   el.classList.toggle('on', opts[key]);
+
+  if (key === 'thumb') {
+    onUrlInput(document.getElementById('urlInput').value);
+  } else if (key === 'kp') {
+    applyKeyPointsOption();
+  } else if (key === 'type' && currentData) {
+    const summaryEl = document.getElementById('summaryText');
+    if (opts.type) {
+      typeWriter(currentSummary, summaryEl);
+    } else {
+      typewriterRunId++;
+      summaryEl.textContent = currentSummary;
+      updateWordCount(currentSummary);
+    }
+  }
+}
+
+function applyKeyPointsOption() {
+  const tab = document.getElementById('keyPointsTab');
+  const panel = document.getElementById('tab1');
+  const display = opts.kp ? '' : 'none';
+
+  tab.style.display = display;
+  panel.style.display = display;
+  document.querySelectorAll('.key-points-meta').forEach(el => {
+    el.style.display = display;
+  });
+
+  if (!opts.kp && panel.classList.contains('on')) switchTab(0);
 }
 
 // ── URL INPUT HANDLER ─────────────────────────────────────────────
@@ -1232,17 +1267,19 @@ function stopStages() {
 
 // ── TYPEWRITER ───────────────────────────────────────────────────
 async function typeWriter(text, el) {
+  const runId = ++typewriterRunId;
   el.innerHTML = '';
   const cursor = document.createElement('span');
   cursor.className = 'cursor';
   el.appendChild(cursor);
   for (let i = 0; i < text.length; i++) {
+    if (runId !== typewriterRunId || !opts.type) return;
     const node = document.createTextNode(text[i]);
     el.insertBefore(node, cursor);
     await new Promise(r => setTimeout(r, 7));
   }
   cursor.remove();
-  updateWordCount(text);
+  if (runId === typewriterRunId) updateWordCount(text);
 }
 
 function updateWordCount(text) {
@@ -1332,6 +1369,7 @@ function showError(message) {
 
 // ── RESET ─────────────────────────────────────────────────────────
 function resetAll() {
+  typewriterRunId++;
   currentData = null;
   currentSummary = '';
   originalSummary = '';
@@ -1418,7 +1456,7 @@ async function summarize() {
     document.getElementById('metaBar').innerHTML = `
       <span class="meta-chip accent">ID: ${data.video_id}</span>
       <span class="meta-chip">${data.transcript_length.toLocaleString()} words transcribed</span>
-      <span class="meta-chip">${data.key_points.length} key points</span>
+      <span class="meta-chip key-points-meta">${data.key_points.length} key points</span>
     `;
 
     document.getElementById('rawInfo').textContent =
@@ -1429,15 +1467,14 @@ async function summarize() {
       `Model           : Facebook/BART model\n` +
       `URL             : ${url}`;
 
-    if (opts.kp) {
-      document.getElementById('kpList').innerHTML = data.key_points
-        .map((p, i) => `
-          <li class="kp-item" style="animation-delay:${i * 0.08}s">
-            <div class="kp-num">${String(i + 1).padStart(2, '0')}</div>
-            <div class="kp-text">${p}</div>
-          </li>`)
-        .join('');
-    }
+    document.getElementById('kpList').innerHTML = data.key_points
+      .map((p, i) => `
+        <li class="kp-item" style="animation-delay:${i * 0.08}s">
+          <div class="kp-num">${String(i + 1).padStart(2, '0')}</div>
+          <div class="kp-text">${p}</div>
+        </li>`)
+      .join('');
+    applyKeyPointsOption();
 
     resultWrap.style.display = 'block';
     setTimeout(() => resultWrap.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
