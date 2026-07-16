@@ -29,3 +29,6 @@ models/
 # Hugging Face cache/files
 .cache/
 huggingface/
+# Local database files
+*.db
+*.db.backup
