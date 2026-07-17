@@ -13,7 +13,10 @@ from summarizer import get_summary
 ADMIN_USERNAME = "admin"
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
+app.config['SECRET_KEY'] = os.environ.get(
+    'SECRET_KEY',
+    'dev-key-change-this-in-production'
+)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     "DATABASE_URL",
     f"sqlite:///{os.path.join(BASE_DIR, 'vidbrief.db')}"
@@ -93,20 +96,9 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-
+        
         user = User.query.filter_by(username=username).first()
-
-        print("\n========== LOGIN DEBUG ==========")
-        print("Username entered:", repr(username))
-        print("Password entered:", repr(password))
-        print("User found:", user)
-
-        if user:
-            print("Stored hash:", user.password_hash)
-            print("Password check:", user.check_password(password))
-
-        print("=================================\n")
-
+ 
         if user and user.check_password(password):
             session.pop("is_guest", None)
             login_user(user)
@@ -130,14 +122,6 @@ def logout():
     session.pop("is_guest", None)
     logout_user()
     return redirect(url_for("login"))
-
-@app.route("/debug-users")
-def debug_users():
-    users = User.query.all()
-    for u in users:
-        print(u.id, u.username, u.email, u.password_hash)
-    return "Check terminal"
-
 
 # ──── Main Routes ────
 @app.route("/")
@@ -188,18 +172,26 @@ def summarize():
     if not current_user.is_authenticated and not is_guest_mode():
         return jsonify({"error": "Please sign in or continue as guest."}), 401
 
-    data = request.get_json()
-    url = data.get("url", "").strip()
+    try:
+        data = request.get_json()
+        if data is None:
+            return jsonify({"error": "Invalid JSON in request"}), 400
+        
+        url = data.get("url", "").strip()
 
-    if not url:
-        return jsonify({"error": "No URL provided. Please paste a YouTube link."}), 400
+        if not url:
+            return jsonify({"error": "No URL provided. Please paste a YouTube link."}), 400
+        
+        result = get_summary(url)
 
-    result = get_summary(url)
-
-    if "error" in result:
-        return jsonify(result), 500
-
-    return jsonify(result)
+        if "error" in result:
+            return jsonify(result), 400
+        
+        return jsonify(result), 200
+    except ValueError as ve:
+        return jsonify({"error": f"Invalid request format: {str(e)}"}), 400
+    except Exception as e:
+        return jsonify({"error": "An unexpected error occured. Please try again later."}), 500
 
 
 @app.route("/translate-summary", methods=["POST"])
