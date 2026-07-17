@@ -1,5 +1,10 @@
 import os
 import json
+
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -31,7 +36,11 @@ login_manager.login_view = 'login'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    try:
+        user_id_int = int(user_id)
+        return User.query.get(user_id_int)
+    except (ValueError, TypeError):
+        return None
 
 
 def is_admin_user(user):
@@ -81,14 +90,15 @@ def register():
                 return render_template("register.html", error="An admin account already exists")
             role = "admin"
 
-        user = User(username=username, email=email, role=role)
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-
-        return redirect(url_for("login"))
-
-    return render_template("register.html")
+        try:
+            user = User(username=username, email=email, role=role)
+            user.set_password(password)
+            db.session.add(user)
+            db.session.commit()
+            return redirect(url_for("login"))
+        except Exception as e:
+            db.session.rollback()
+            return render_template("register.html", error=f"Registration failed: {str(e)}")
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -156,15 +166,19 @@ def admin_dashboard():
 @login_required
 def admin_delete_user(user_id):
     if not is_admin_user(current_user):
-        return redirect(url_for("index"))
+        return jsonify({"error": "Admin access required"}), 403
 
     user = User.query.get_or_404(user_id)
     if is_admin_user(user):
-        return redirect(url_for("admin_dashboard"))
+        return jsonify({"error": "Cannot delete admin accounts"}), 400
 
-    db.session.delete(user)
-    db.session.commit()
-    return redirect(url_for("admin_dashboard"))
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({"success": True, "message": "User deleted successfully"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to delete user: {str(e)}"}), 500
 
 
 @app.route("/summarize", methods=["POST"])
@@ -227,7 +241,7 @@ def translate_summary():
             "translated_text": translated_text,
             "language": allowed_languages[target_language],
         })
-    except Exception as e:
+    except (requests.RequestException, ValueError) as e: 
         return jsonify({"error": f"Translation failed: {str(e)}"}), 500
 
 
@@ -252,6 +266,14 @@ def save_summary():
     if not all([url, video_id, summary]):
         return jsonify({"error": "Missing required fields"}), 400
 
+    # Validate key_points
+    if not isinstance(key_points, list):
+         return jsonify({"error": "key_points must be a list"}), 400
+ 
+    try:
+         json.dumps(key_points)
+    except (TypeError, ValueError) as e:
+         return jsonify({"error": f"Invalid key_points format: {str(e)}"}), 400    
     # Create summary record
     new_summary = Summary(
         user_id=current_user.id,
@@ -264,14 +286,17 @@ def save_summary():
         thumbnail_url=thumbnail_url
     )
 
-    db.session.add(new_summary)
-    db.session.commit()
-
-    return jsonify({
-        "success": True,
-        "message": "Summary saved successfully!",
-        "summary_id": new_summary.id
-    })
+    try:
+        db.session.add(new_summary)
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "message": "Summary saved successfully!",
+            "summary_id": new_summary.id
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to save summary: {str(e)}"}), 500
 
 
 @app.route("/summaries", methods=["GET"])
@@ -307,10 +332,13 @@ def delete_summary(summary_id):
     if summary.user_id != current_user.id:
         return jsonify({"error": "Unauthorized"}), 403
     
-    db.session.delete(summary)
-    db.session.commit()
-    
-    return jsonify({"success": True, "message": "Summary deleted"})
+    try:
+        db.session.delete(summary)
+        db.session.commit()
+        return jsonify({"success": True, "message": "Summary deleted"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to delete summary: {str(e)}"}), 500
 
 
 @app.route("/summary/<int:summary_id>/rename", methods=["PATCH"])
@@ -329,10 +357,13 @@ def rename_summary(summary_id):
     if not new_title:
         return jsonify({"error": "Title cannot be empty"}), 400
 
-    summary.title = new_title
-    db.session.commit()
-
-    return jsonify({"success": True, "message": "Summary renamed"})
+    try:
+        summary.title = new_title
+        db.session.commit()
+        return jsonify({"success": True, "message": "Summary renamed"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Failed to rename summary: {str(e)}"}), 500
 
 
 if __name__ == "__main__":

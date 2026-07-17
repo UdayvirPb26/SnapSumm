@@ -277,6 +277,8 @@ def fetch_transcript(video_id: str) -> str:
 
 
 def chunk_text(text: str) -> list:
+    if not text or not text.strip():
+        raise ValueError("Transcript text cannot be empty")
     """Split a transcript using the configured chunk word limit."""
     words = text.split()
     chunks, chunk = [], []
