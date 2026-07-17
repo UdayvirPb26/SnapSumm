@@ -1,4 +1,4 @@
-# Snap-Summ - YouTube Video Summarizer
+# SnapSumm - YouTube Video Summarizer
 
 Snap-Summ is an AI-powered Flask web app that summarizes YouTube videos from transcripts, saves user summary history, supports translation into Indian languages, and stores app data in PostgreSQL.
 
