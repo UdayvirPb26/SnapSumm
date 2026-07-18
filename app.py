@@ -202,7 +202,7 @@ def summarize():
             return jsonify(result), 400
         
         return jsonify(result), 200
-    except ValueError as ve:
+    except ValueError as e:
         return jsonify({"error": f"Invalid request format: {str(e)}"}), 400
     except Exception as e:
         return jsonify({"error": "An unexpected error occured. Please try again later."}), 500
