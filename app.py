@@ -8,7 +8,7 @@ load_dotenv()
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from sqlalchemy import text
 from deep_translator import GoogleTranslator
@@ -59,107 +59,149 @@ def ensure_user_role_column():
                 conn.execute(text("ALTER TABLE user ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'user'"))
 
 
-# ──── Authentication Routes ────
-@app.route("/register", methods=["GET", "POST"])
+# ──── Authentication Routes (JSON API for the React frontend) ────
+@app.route("/register", methods=["POST"])
 def register():
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        email = request.form.get("email", "").strip()
-        password = request.form.get("password", "")
-        confirm_password = request.form.get("confirm_password", "")
+    payload = request.get_json(silent=True) or {}
+    username = payload.get("username", "").strip()
+    email = payload.get("email", "").strip()
+    password = payload.get("password", "")
+    confirm_password = payload.get("confirm_password", "")
 
-        # Validation
-        if not username or not email or not password:
-            return render_template("register.html", error="All fields are required")
+    if not username or not email or not password:
+        return jsonify({"error": "All fields are required"}), 400
 
-        if password != confirm_password:
-            return render_template("register.html", error="Passwords do not match")
+    if password != confirm_password:
+        return jsonify({"error": "Passwords do not match"}), 400
 
-        if len(password) < 6:
-            return render_template("register.html", error="Password must be at least 6 characters")
+    if len(password) < 6:
+        return jsonify({"error": "Password must be at least 6 characters"}), 400
 
-        if User.query.filter_by(username=username).first():
-            return render_template("register.html", error="Username already exists")
+    if User.query.filter_by(username=username).first():
+        return jsonify({"error": "Username already exists"}), 400
 
-        if User.query.filter_by(email=email).first():
-            return render_template("register.html", error="Email already registered")
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Email already registered"}), 400
 
-        role = "user"
-        if username.lower() == ADMIN_USERNAME:
-            if User.query.filter_by(role="admin").first():
-                return render_template("register.html", error="An admin account already exists")
-            role = "admin"
+    role = "user"
+    if username.lower() == ADMIN_USERNAME:
+        if User.query.filter_by(role="admin").first():
+            return jsonify({"error": "An admin account already exists"}), 400
+        role = "admin"
 
-        try:
-            user = User(username=username, email=email, role=role)
-            user.set_password(password)
-            db.session.add(user)
-            db.session.commit()
-            return redirect(url_for("login"))
-        except Exception as e:
-            db.session.rollback()
-            return render_template("register.html", error=f"Registration failed: {str(e)}")
+    try:
+        user = User(username=username, email=email, role=role)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        return jsonify({"success": True}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Registration failed: {str(e)}"}), 500
 
 
-@app.route("/login", methods=["GET", "POST"])
+@app.route("/login", methods=["POST"])
 def login():
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
-        
-        user = User.query.filter_by(username=username).first()
- 
-        if user and user.check_password(password):
-            session.pop("is_guest", None)
-            login_user(user)
-            return redirect(url_for("index"))
+    payload = request.get_json(silent=True) or {}
+    username = payload.get("username", "").strip()
+    password = payload.get("password", "")
 
-        return render_template("login.html", error="Invalid username or password")
+    user = User.query.filter_by(username=username).first()
 
-    return render_template("login.html")
+    if user and user.check_password(password):
+        session.pop("is_guest", None)
+        login_user(user)
+        return jsonify({
+            "success": True,
+            "username": user.username,
+            "is_admin": is_admin_user(user),
+        })
+
+    return jsonify({"error": "Invalid username or password"}), 401
 
 
-@app.route("/guest")
+@app.route("/guest", methods=["POST"])
 def guest():
     if current_user.is_authenticated:
         logout_user()
     session["is_guest"] = True
-    return redirect(url_for("index"))
+    return jsonify({"success": True})
 
 
-@app.route("/logout")
+@app.route("/logout", methods=["POST"])
 def logout():
     session.pop("is_guest", None)
     logout_user()
-    return redirect(url_for("login"))
+    return jsonify({"success": True})
+
+
+@app.route("/api/me")
+def api_me():
+    if current_user.is_authenticated:
+        return jsonify({
+            "authenticated": True,
+            "username": current_user.username,
+            "is_admin": is_admin_user(current_user),
+            "is_guest": False,
+        })
+    if is_guest_mode():
+        return jsonify({"authenticated": True, "username": "Guest", "is_admin": False, "is_guest": True})
+    return jsonify({"authenticated": False})
 
 # ──── Main Routes ────
-@app.route("/")
-def index():
-    if not current_user.is_authenticated and not is_guest_mode():
-        return redirect(url_for("login"))
+# In production, `npm run build` inside frontend/ produces frontend/dist/.
+# We serve those static files, with a catch-all so client-side routes
+# like /admin still return the React app's index.html (React Router then
+# takes over in the browser). During dev you don't hit this at all — you
+# run `npm run dev` separately and open http://localhost:5173.
+REACT_BUILD_DIR = os.path.join(BASE_DIR, "frontend", "dist")
 
-    return render_template(
-        "index.html",
-        username=current_user.username if current_user.is_authenticated else "Guest",
-        is_admin=is_admin_user(current_user) if current_user.is_authenticated else False,
-        is_guest=is_guest_mode(),
+
+@app.route("/")
+@app.route("/<path:path>")
+def index(path=""):
+    if path.startswith(("api/", "login", "register", "logout", "guest",
+                         "summarize", "translate-summary", "save-summary",
+                         "summaries", "summary", "admin")):
+        return jsonify({"error": "Not found"}), 404
+
+    build_index = os.path.join(REACT_BUILD_DIR, "index.html")
+    if os.path.exists(build_index):
+        requested = os.path.join(REACT_BUILD_DIR, path)
+        if path and os.path.isfile(requested):
+            return send_from_directory(REACT_BUILD_DIR, path)
+        return send_from_directory(REACT_BUILD_DIR, "index.html")
+
+    return (
+        "React build not found. Run `cd frontend && npm run build`, "
+        "or run the dev server with `npm run dev` and open localhost:5173.",
+        200,
     )
 
 
-@app.route("/admin")
+# GET /admin (a direct page load) now falls through to the catch-all
+# index() route above, which serves the React app; React Router handles
+# navigation to the Admin page client-side. The server still enforces
+# admin-only access below — never trust the client alone for authorization.
+
+@app.route("/api/admin/users")
 @login_required
-def admin_dashboard():
+def api_admin_users():
     if not is_admin_user(current_user):
-        return redirect(url_for("index"))
+        return jsonify({"error": "Admin access required"}), 403
 
     users = User.query.order_by(User.username).all()
-    return render_template(
-        "admin.html",
-        username=current_user.username,
-        users=users,
-        user_count=len(users),
-    )
+    return jsonify({
+        "users": [
+            {
+                "id": u.id,
+                "username": u.username,
+                "email": u.email,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+            }
+            for u in users
+        ]
+    })
 
 
 @app.route("/admin/delete/<int:user_id>", methods=["POST"])
